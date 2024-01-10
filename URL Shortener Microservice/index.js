@@ -15,7 +15,7 @@ app.get("/", function (req, res) {
 app.post("/api/shorturl", function (req, res) {
   let { url } = req.body;
 
-  if (!URL.canParse(url)) {
+  if (!/^(http:\/\/|https:\/\/)[\S]*\.[a-zA-Z]+$/.test(url)) {
     res.json({ error: "invalid url" });
     return;
   }
