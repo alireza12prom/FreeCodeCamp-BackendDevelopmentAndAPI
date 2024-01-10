@@ -1,5 +1,6 @@
 const table = new Map();
 
+const validurl = require("valid-url");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -15,12 +16,10 @@ app.get("/", function (req, res) {
 app.post("/api/shorturl", function (req, res) {
   let { url } = req.body;
 
-  if (!/^(http:\/\/|https:\/\/)[\S]*\.[a-zA-Z]+$/.test(url)) {
+  if (!validurl.isWebUri(url)) {
     res.json({ error: "invalid url" });
     return;
   }
-
-  url = new URL(url).toString();
 
   // make a hash of url
   let hash = 0;
