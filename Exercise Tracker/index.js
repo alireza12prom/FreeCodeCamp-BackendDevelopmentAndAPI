@@ -12,20 +12,20 @@ app.get("/", (req, res) => {
 });
 
 // Databases
-const users = new Map();
-const exercises = new Map();
+const users = {};
+const exercises = {};
 
 app.post("/api/users", (req, res, next) => {
   const { username } = req.body;
 
   const id = crypto.randomBytes(14).toString("hex");
-  users.set(id, { _id: id, username });
+  users[id] = { _id: id, username };
 
-  res.json(users.get(id));
+  res.json(users[id]);
 });
 
 app.get("/api/users", (req, res, next) => {
-  res.json(Array.from(users.values()));
+  res.json(Object.values(users));
 });
 
 app.post("/api/users/:_id/exercises", (req, res, next) => {
@@ -33,7 +33,7 @@ app.post("/api/users/:_id/exercises", (req, res, next) => {
   const { description, duration, date } = req.body;
 
   // check user exists
-  if (!users.has(_id)) {
+  if (!users[_id]) {
     return res
       .status(500)
       .json({ msg: "description: Path `_id` is not found." });
@@ -46,68 +46,80 @@ app.post("/api/users/:_id/exercises", (req, res, next) => {
       .json({ msg: "description: Path `description` is required." });
   }
 
-  if (isNaN(parseInt(duration))) {
+  if (!parseInt(duration)) {
     return res
       .status(500)
       .json({ msg: "description: Path `duration` is not a valid number." });
   }
 
-  if (
-    date &&
-    (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date) ||
-      new Date(date) == "Invalid Date")
-  ) {
+  if (date && new Date(date) == "Invalid Date") {
     return res
       .status(500)
       .json({ msg: "description: Path `date` is not a valid date." });
   }
 
   // add exercise
-  if (!exercises.has(_id)) {
-    exercises.set(_id, []);
+  if (!exercises[_id]) {
+    exercises[_id] = [];
   }
 
-  exercises.get(_id).push({
+  const exercise = {
     description,
-    duration,
-    date: date ? new Date(date).toDateString() : new Date().toDateString(),
-  });
+    duration: +duration,
+    date: date || new Date(Date.now()).toISOString().substring(0, 10),
+  };
 
-  res.json({ ...exercises.get(_id).at(-1), ...users.get(_id) });
+  exercises[_id].push(exercise);
+
+  res.json({
+    ...exercise,
+    ...users[_id],
+    date: new Date(exercise.date).toDateString(),
+  });
 });
 
 app.get("/api/users/:_id/logs", (req, res, next) => {
-  const { _id } = req.params;
-  const { limit, from, to } = req.query;
+  let { _id } = req.params;
+  let { limit, from, to } = req.query;
 
   // check user exists
-  if (!users.has(_id)) {
+  if (!users[_id]) {
     return res
       .status(500)
       .json({ msg: "description: Path `_id` is not found." });
   }
 
-  let user = users.get(_id);
-  let userExercises = exercises.get(_id);
-
-  //  limit
-  let exerciseUser = exercises.get(_id);
-  if (parseInt(limit)) {
-    exerciseUser = exerciseUser.slice(0, parseInt(limit));
-  }
+  let user = users[_id];
+  let userExercises = [...exercises[_id]];
 
   // from & to
-  if (from && new Date(from) != "Invalid Date") {
-    exerciseUser = exerciseUser.filter((ex) => {
-      return new Date(ex.date) >= new Date(from);
-    });
+  from =
+    from && new Date(from) != "Invalid Date"
+      ? from
+      : new Date(0).toISOString().substring(0, 10);
+
+  to =
+    to && new Date(to) != "Invalid Date"
+      ? to
+      : new Date(Date.now()).toISOString();
+
+  userExercises = userExercises.filter((ex) => {
+    console.log(ex);
+    return (
+      new Date(ex.date) >= new Date(from) && new Date(ex.date) <= new Date(to)
+    );
+  });
+
+  // apply limit
+  if (parseInt(limit)) {
+    userExercises = userExercises.slice(0, limit);
   }
 
-  if (to && new Date(to) != "Invalid Date") {
-    exerciseUser = exerciseUser.filter((ex) => {
-      return new Date(ex.date) <= new Date(to);
-    });
-  }
+  // convert data to date string
+  userExercises = userExercises.map((ex) => ({
+    ...ex,
+    date: new Date(ex.date).toDateString(),
+  }));
 
   res.json({ ...user, count: userExercises.length, log: userExercises });
 });
