@@ -10,15 +10,19 @@ app.get("/", function (req, res) {
   res.sendFile(process.cwd() + "/views/index.html");
 });
 
-app.post("/api/fileanalyse", fileupload({}), (req, res, next) => {
-  const uploadedFile = req.files["upfile"];
+app.post(
+  "/api/fileanalyse",
+  fileupload({ uploadTimeout: 0 }),
+  (req, res, next) => {
+    const uploadedFile = req.files["upfile"];
 
-  res.json({
-    name: uploadedFile.name,
-    type: uploadedFile.mimetype,
-    size: uploadedFile.size,
-  });
-});
+    res.json({
+      name: uploadedFile.name,
+      type: uploadedFile.mimetype,
+      size: uploadedFile.size,
+    });
+  }
+);
 
 var listener = app.listen(process.env.PORT || 3000, function () {
   console.log("Your app is listening on port " + listener.address().port);
